@@ -9,30 +9,30 @@ export default async function handler(req, res) {
 
   try {
     const { name, price } = req.body;
-
-    // Validaciones simples
     if (!name || !price) {
       return res.status(400).json({ error: "Faltan datos del producto" });
     }
 
-    // Crear sesión de pago en Stripe
+    // base del sitio (fall back si no viene)
+    const base = (req.headers.origin || process.env.SUCCESS_URL || (`https://${process.env.VERCEL_URL || 'tienda-lebiom.vercel.app'}`)).replace(/\/$/, "");
+    const successUrl = `${base}/#/success`;
+    const cancelUrl = `${base}/#/cancel`;
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: [
         {
           price_data: {
             currency: "mxn",
-            product_data: {
-              name: name,
-            },
-            unit_amount: price * 100, // Stripe trabaja en centavos
+            product_data: { name },
+            unit_amount: price * 100,
           },
           quantity: 1,
         },
       ],
       mode: "payment",
-      success_url: `${req.headers.origin}/success`,
-      cancel_url: `${req.headers.origin}/cancel`,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
     });
 
     res.status(200).json({ url: session.url });
